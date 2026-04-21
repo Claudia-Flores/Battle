@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robot Battle Tournament</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #030a14;
+    --panel: #060f1e;
+    --card: #0a1628;
+    --border: #1a3a5c;
+    --accent: #00d4ff;
+    --accent2: #ff6b00;
+    --win: #00ff88;
+    --lose: #ff3366;
+    --text: #c8e0ff;
+    --muted: #4a6a8a;
+    --gold: #ffd700;
+    --silver: #c0c0c0;
+    --bronze: #cd7f32;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Rajdhani', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse at 20% 20%, rgba(0,212,255,0.05) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(255,107,0,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* GRID LINES */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* HEADER */
+  header {
+    position: relative; z-index: 2;
+    text-align: center;
+    padding: 28px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(0,212,255,0.06) 0%, transparent 100%);
+  }
+  header .logo-line {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+  }
+  header .logo-icon {
+    width: 48px; height: 48px;
+    background: var(--accent);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(0,212,255,0.4); }
+    50% { box-shadow: 0 0 0 12px rgba(0,212,255,0); }
+  }
+  header h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.4rem, 4vw, 2.4rem);
+    font-weight: 900;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--accent), #ffffff, var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: uppercase;
+  }
+  header p { color: var(--muted); font-size: 0.9rem; margin-top: 6px; letter-spacing: 2px; }
+
+  /* NAV TABS */
+  .tabs {
+    position: relative; z-index: 2;
+    display: flex; gap: 2px;
+    padding: 12px 20px 0;
+    background: var(--panel);
+    border-bottom: 2px solid var(--border);
+  }
+  .tab-btn {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .tab-btn.active {
+    background: var(--card);
+    border-color: var(--border);
+    color: var(--accent);
+    border-bottom: 2px solid var(--bg);
+    margin-bottom: -2px;
+  }
+  .tab-btn:hover:not(.active) { color: var(--text); }
+
+  /* MAIN CONTENT */
+  main {
+    position: relative; z-index: 1;
+    padding: 24px 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* SETUP VIEW */
+  .setup-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media(max-width: 768px) { .setup-grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+    position: relative;
+  }
+  .panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+  .panel h2 {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+  }
+
+  .form-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .form-row input, .form-row select {
+    flex: 1; min-width: 120px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 12px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.95rem;
+    border-radius: 2px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-row input:focus, .form-row select:focus { border-color: var(--accent); }
+  .form-row input::placeholder { color: var(--muted); }
+  .form-row select option { background: var(--panel); }
+
+  .btn {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    padding: 10px 20px;
+    border: none; cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    border-radius: 2px;
+  }
+  .btn-accent {
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 700;
+  }
+  .btn-accent:hover { background: #fff; box-shadow: 0 0 20px rgba(0,212,255,0.4); }
+  .btn-danger { background: var(--lose); color: #fff; }
+  .btn-danger:hover { background: #ff0040; }
+  .btn-win { background: var(--win); color: var(--bg); }
+  .btn-win:hover { background: #00ffaa; box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+  .btn-secondary {
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-orange { background: var(--accent2); color: #fff; }
+  .btn-orange:hover { background: #ff8800; }
+
+  /* ROBOT LIST */
+  .robot-list { max-height: 360px; overflow-y: auto; }
+  .robot-list::-webkit-scrollbar { width: 4px; }
+  .robot-list::-webkit-scrollbar-track { background: var(--panel); }
+  .robot-list::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .robot-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    margin-bottom: 6px;
+    transition: border-color 0.2s;
+  }
+  .robot-item:hover { border-color: var(--accent); }
+  .robot-item .robot-info { display: flex; flex-direction: column; gap: 2px; }
+  .robot-item .robot-name { font-weight: 700; font-size: 1rem; color: var(--text); }
+  .robot-item .robot-meta { font-size: 0.75rem; color: var(--muted); letter-spacing: 1px; }
+  .robot-item .robot-meta span { color: var(--accent); }
+
+  .robot-num {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.1rem; font-weight: 900;
+    color: var(--accent); opacity: 0.5;
+    min-width: 30px; text-align: center;
+  }
+
+  .no-robots {
+    text-align: center; padding: 40px 20px;
+    color: var(--muted); font-size: 0.9rem; letter-spacing: 2px;
+  }
+
+  /* TOURNAMENT VIEW - BRACKET */
+  .bracket-wrapper {
+    overflow-x: auto; padding-bottom: 20px;
+  }
+  .bracket {
+    display: flex;
+    gap: 0;
+    min-width: max-content;
+    align-items: stretch;
+    padding: 10px 0;
+  }
+
+  .round-col {
+    display: flex; flex-direction: column;
+    min-width: 200px;
+  }
+  .round-header {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-align: center;
+    padding: 8px 10px 16px;
+    text-transform: uppercase;
+  }
+  .round-matches {
+    display: flex; flex-direction: column;
+    flex: 1; justify-content: space-around;
+    gap: 12px;
+    padding: 0 8px;
+  }
+
+  /* CONNECTOR LINES */
+  .round-connector {
+    display: flex; flex-direction: column;
+    min-width: 24px;
+    justify-content: space-around;
+    padding-top: 42px;
+  }
+  .connector-group {
+    display: flex; flex-direction: column;
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* MATCH CARD */
+  .match-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+  .match-card:hover { border-color: var(--muted); }
+  .match-card.editable:hover { border-color: var(--accent); }
+
+  .match-num {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-align: center;
+    padding: 4px;
+    background: rgba(0,0,0,0.3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .robot-slot {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+  }
+  .robot-slot:first-of-type { border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .robot-slot:hover { background: rgba(0,212,255,0.05); }
+  .robot-slot.winner { background: rgba(0,255,136,0.08); }
+  .robot-slot.loser { opacity: 0.4; }
+  .robot-slot.bye { background: rgba(255,107,0,0.06); cursor: default; }
+
+  .slot-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .slot-team {
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  .slot-team.empty { color: var(--border); font-style: italic; }
+
+  .win-indicator {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--win);
+    box-shadow: 0 0 6px var(--win);
+    flex-shrink: 0;
+  }
+  .win-indicator.hidden { opacity: 0; }
+
+  .bye-tag {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 1px;
+    color: var(--accent2);
+    background: rgba(255,107,0,0.15);
+    padding: 1px 5px; border-radius: 2px;
+  }
+
+  /* EDIT OVERLAY */
+  .match-edit-btn {
+    position: absolute; top: 4px; right: 4px;
+    background: transparent; border: none;
+    color: var(--muted); cursor: pointer;
+    font-size: 0.75rem; padding: 2px 5px;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .match-card:hover .match-edit-btn { opacity: 1; }
+  .match-edit-btn:hover { color: var(--accent); }
+
+  /* FINAL / ABC */
+  .finals-section {
+    text-align: center;
+    padding: 30px 20px;
+  }
+  .finals-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.2rem;
+    letter-spacing: 4px;
+    color: var(--accent);
+    margin-bottom: 24px;
+  }
+  .abc-grid {
+    display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+  }
+  .abc-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px 24px;
+    min-width: 160px;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .abc-card.place-1 { border-color: var(--gold); }
+  .abc-card.place-2 { border-color: var(--silver); }
+  .abc-card.place-3 { border-color: var(--bronze); }
+
+  .abc-match {
+    display: flex; gap: 20px; justify-content: center;
+    flex-wrap: wrap; margin-bottom: 24px;
+  }
+
+  /* PODIUM */
+  .podium {
+    display: flex; align-items: flex-end; justify-content: center;
+    gap: 10px; margin-top: 30px;
+  }
+  .podium-place {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    text-align: center;
+  }
+  .podium-block {
+    width: 100px; border-radius: 3px 3px 0 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', monospace;
+    font-size: 1.8rem; font-weight: 900;
+  }
+  .podium-place:nth-child(1) .podium-block { height: 80px; background: rgba(192,192,192,0.2); border: 1px solid var(--silver); color: var(--silver); }
+  .podium-place:nth-child(2) .podium-block { height: 120px; background: rgba(255,215,0,0.2); border: 1px solid var(--gold); color: var(--gold); }
+  .podium-place:nth-child(3) .podium-block { height: 60px; background: rgba(205,127,50,0.2); border: 1px solid var(--bronze); color: var(--bronze); }
+
+  .podium-name { font-weight: 700; font-size: 0.9rem; max-width: 100px; }
+  .podium-team { font-size: 0.75rem; color: var(--muted); }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 28px;
+    min-width: 340px;
+    max-width: 90vw;
+    position: relative;
+  }
+  .modal::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .modal h3 {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+  .modal-close {
+    position: absolute; top: 12px; right: 12px;
+    background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.2rem;
+  }
+  .modal-close:hover { color: var(--text); }
+
+  .winner-options { display: flex; flex-direction: column; gap: 10px; }
+  .winner-option {
+    padding: 14px 18px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    font-family: 'Rajdhani', sans-serif;
+    color: var(--text);
+  }
+  .winner-option:hover { border-color: var(--win); background: rgba(0,255,136,0.08); color: var(--win); }
+  .winner-option .opt-name { font-size: 1.1rem; font-weight: 700; }
+  .winner-option .opt-meta { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 30px; right: 30px;
+    background: var(--card); border: 1px solid var(--accent);
+    padding: 12px 20px; border-radius: 3px;
+    font-family: 'Orbitron', monospace; font-size: 0.7rem; letter-spacing: 2px;
+    color: var(--accent); z-index: 200;
+    transform: translateY(60px); opacity: 0;
+    transition: all 0.3s;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* GENERATE BTN */
+  .generate-bar {
+    display: flex; gap: 12px; align-items: center;
+    padding: 16px 0; flex-wrap: wrap;
+  }
+  .generate-bar .info {
+    font-size: 0.85rem; color: var(--muted);
+  }
+  .generate-bar .info b { color: var(--accent); }
+
+  /* STATUS BAR */
+  .status-bar {
+    display: flex; gap: 20px; align-items: center;
+    padding: 12px 16px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .status-item { display: flex; flex-direction: column; gap: 2px; }
+  .status-label { font-size: 0.65rem; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+  .status-value { font-family: 'Orbitron', monospace; font-size: 1rem; font-weight: 700; color: var(--accent); }
+
+  /* ROUND TABS */
+  .round-tabs {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px;
+  }
+  .round-tab {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.65rem; letter-spacing: 2px;
+    padding: 7px 14px;
+    background: var(--panel); border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer; border-radius: 2px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .round-tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .round-tab.completed { border-color: var(--win); color: var(--win); }
+  .round-tab:hover:not(.active) { border-color: var(--text); color: var(--text); }
+
+  /* CURRENT ROUND MATCHES */
+  .matches-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .match-big {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .match-big::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+  .match-big .match-header {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem; letter-spacing: 2px;
+    color: var(--muted); padding: 8px 12px;
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .match-big .match-header .edit-lnk {
+    color: var(--muted); cursor: pointer; font-size: 0.65rem;
+    background: none; border: 1px solid var(--border); padding: 2px 8px;
+    border-radius: 2px; letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .match-big .match-header .edit-lnk:hover { border-color: var(--accent); color: var(--accent); }
+
+  .combatant {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    cursor: pointer; transition: background 0.15s;
+    position: relative;
+  }
+  .combatant:first-of-type { border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .combatant:hover:not(.no-hover) { background: rgba(0,212,255,0.05); }
+  .combatant.winner { background: rgba(0,255,136,0.07); }
+  .combatant.loser { opacity: 0.35; }
+  .combatant.bye-slot { cursor: default; background: rgba(255,107,0,0.05); }
+
+  .combatant-num {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.4rem; font-weight: 900;
+    color: var(--border); min-width: 28px;
+  }
+  .combatant.winner .combatant-num { color: var(--win); }
+
+  .combatant-info { flex: 1; }
+  .combatant-info .c-name { font-size: 1.05rem; font-weight: 700; }
+  .combatant-info .c-team { font-size: 0.75rem; color: var(--muted); letter-spacing: 1px; }
+  .combatant-info .c-driver { font-size: 0.7rem; color: var(--muted); }
+
+  .combatant-win-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--win); box-shadow: 0 0 8px var(--win);
+    opacity: 0;
+  }
+  .combatant.winner .combatant-win-dot { opacity: 1; }
+
+  .vs-divider {
+    text-align: center; font-family: 'Orbitron', monospace;
+    font-size: 0.65rem; color: var(--border); letter-spacing: 3px;
+    padding: 2px 0;
+  }
+
+  .match-actions { display: flex; gap: 8px; padding: 10px 12px; background: rgba(0,0,0,0.2); }
+
+  /* ABC section */
+  .abc-section {
+    background: var(--card); border: 1px solid var(--gold);
+    border-radius: 4px; padding: 24px; margin-top: 20px;
+  }
+  .abc-section::before {
+    content: '🏆 RONDA ABC — PODIO FINAL';
+    font-family: 'Orbitron', monospace;
+    font-size: 0.75rem; letter-spacing: 3px; color: var(--gold);
+    display: block; margin-bottom: 20px;
+  }
+
+  .empty-state {
+    text-align: center; padding: 60px 20px; color: var(--muted);
+    font-size: 0.9rem; letter-spacing: 2px;
+  }
+  .empty-state .big { font-size: 3rem; margin-bottom: 12px; display: block; opacity: 0.3; }
+
+  .badge {
+    font-family: 'Orbitron', monospace; font-size: 0.6rem;
+    letter-spacing: 1px; padding: 2px 8px; border-radius: 2px;
+  }
+  .badge-accent { background: rgba(0,212,255,0.15); color: var(--accent); border: 1px solid rgba(0,212,255,0.3); }
+  .badge-orange { background: rgba(255,107,0,0.15); color: var(--accent2); border: 1px solid rgba(255,107,0,0.3); }
+  .badge-win { background: rgba(0,255,136,0.15); color: var(--win); border: 1px solid rgba(0,255,136,0.3); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-line">
+    <div class="logo-icon">⚙</div>
+    <h1>Guerra 3Lb</h1>
+  </div>
+  <p>SISTEMA DE BRACKET — COMPETENCIA OFICIAL</p>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('setup')">① Registro</button>
+  <button class="tab-btn" id="tab-tournament" onclick="switchTab('tournament')">② Torneo</button>
+  <button class="tab-btn" id="tab-bracket" onclick="switchTab('bracket')">③ Bracket</button>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:10px;padding:0 4px 0 0">
+    <span id="save-indicator" style="font-size:0.65rem;letter-spacing:1px;color:var(--win);font-family:'Orbitron',monospace;opacity:0;transition:opacity 0.6s">✓ GUARDADO</span>
+    <button class="tab-btn" style="color:var(--lose);border-color:rgba(255,51,102,0.3)" onclick="confirmReset()">⊘ Limpiar Todo</button>
+  </div>
+</div>
+
+<main>
+  <!-- SETUP VIEW -->
+  <div class="view active" id="view-setup">
+    <div class="setup-grid">
+      <!-- ADD ROBOT -->
+      <div class="panel">
+        <h2>⚡ Agregar Robot</h2>
+        <div class="form-row">
+          <input type="text" id="inp-name" placeholder="Nombre del robot" />
+        </div>
+        <div class="form-row">
+          <input type="text" id="inp-team" placeholder="Equipo / Escuela" />
+          <input type="text" id="inp-driver" placeholder="Driver / Piloto" />
+        </div>
+        <div class="form-row">
+          <button class="btn btn-accent" onclick="addRobot()">+ Agregar</button>
+        </div>
+      </div>
+
+      <!-- ROBOT LIST -->
+      <div class="panel">
+        <h2>🤖 Robots Registrados <span id="robot-count" class="badge badge-accent">0</span></h2>
+        <div class="robot-list" id="robot-list">
+          <div class="no-robots">Sin robots registrados aún.<br>Agrega al menos 4 para comenzar.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="generate-bar">
+      <button class="btn btn-accent" onclick="generateTournament()" id="btn-generate" disabled>⚡ Generar Torneo</button>
+      <div class="info">Robots: <b id="gbar-count">0</b> registrados &nbsp;|&nbsp; Se requieren mínimo <b>3</b></div>
+    </div>
+  </div>
+
+  <!-- TOURNAMENT VIEW -->
+  <div class="view" id="view-tournament">
+    <div class="status-bar">
+      <div class="status-item"><div class="status-label">Ronda</div><div class="status-value" id="st-round">—</div></div>
+      <div class="status-item"><div class="status-label">Total Robots</div><div class="status-value" id="st-total">—</div></div>
+      <div class="status-item"><div class="status-label">En Bracket</div><div class="status-value" id="st-remaining">—</div></div>
+      <div class="status-item"><div class="status-label">Estado</div><div class="status-value" id="st-status">—</div></div>
+      <div style="margin-left:auto;">
+        <button class="btn btn-secondary" onclick="switchTab('setup')">✏ Editar Robots</button>
+      </div>
+    </div>
+
+    <div class="round-tabs" id="round-tabs"></div>
+    <div id="matches-container"></div>
+  </div>
+
+  <!-- BRACKET VIEW -->
+  <div class="view" id="view-bracket">
+    <div class="bracket-wrapper">
+      <div class="bracket" id="bracket-display"></div>
+    </div>
+  </div>
+</main>
+
+<!-- WINNER MODAL -->
+<div class="modal-overlay" id="modal-winner">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>⚔ SELECCIONAR GANADOR</h3>
+    <div class="winner-options" id="winner-options"></div>
+  </div>
+</div>
+
+<!-- BYE MODAL -->
+<div class="modal-overlay" id="modal-bye">
+  <div class="modal">
+    <button class="modal-close" onclick="closeByeModal()">✕</button>
+    <h3>🎲 SORTEO — BYE</h3>
+    <p style="color:var(--muted);margin-bottom:16px;font-size:0.9rem;">El número de robots es impar. Selecciona o sortea un robot para pasar directamente a la siguiente ronda.</p>
+    <div style="margin-bottom:16px;">
+      <button class="btn btn-orange" onclick="randomBye()" style="margin-bottom:10px;width:100%">🎲 Sorteo Aleatorio</button>
+    </div>
+    <div class="winner-options" id="bye-options"></div>
+  </div>
+</div>
+
+<!-- CONFIRM RESET MODAL -->
+<div class="modal-overlay" id="modal-reset">
+  <div class="modal" style="max-width:380px;text-align:center">
+    <h3 style="color:var(--lose)">⚠ LIMPIAR TODO</h3>
+    <p style="color:var(--muted);margin:16px 0 24px;font-size:0.95rem;line-height:1.6">
+      Se borrarán todos los robots, el torneo y el historial guardado.<br>
+      <strong style="color:var(--text)">Esta acción no se puede deshacer.</strong>
+    </p>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button class="btn btn-secondary" onclick="closeResetModal()" style="min-width:120px">Cancelar</button>
+      <button class="btn btn-danger" onclick="doReset()" style="min-width:120px">Borrar Todo</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== STATE =====================
+let robots = [];
+let tournament = null;
+// tournament = { rounds: [[{id,r1,r2,winner,byeRobot},...], ...], currentRound: 0, abcMode: false, podium: [] }
+
+let currentMatchEdit = null;
+let currentView = 'setup';
+
+// ===================== SETUP =====================
+function addRobot() {
+  const name = document.getElementById('inp-name').value.trim();
+  const team = document.getElementById('inp-team').value.trim();
+  const driver = document.getElementById('inp-driver').value.trim();
+  if (!name) { showToast('Escribe el nombre del robot'); return; }
+  robots.push({ id: Date.now(), name, team: team || '—', driver: driver || '—' });
+  document.getElementById('inp-name').value = '';
+  renderRobotList();
+  saveState();
+  showToast(`${name} registrado`);
+}
+
+function removeRobot(id) {
+  robots = robots.filter(r => r.id !== id);
+  renderRobotList();
+  saveState();
+}
+
+function renderRobotList() {
+  const el = document.getElementById('robot-list');
+  document.getElementById('robot-count').textContent = robots.length;
+  document.getElementById('gbar-count').textContent = robots.length;
+  document.getElementById('btn-generate').disabled = robots.length < 3;
+
+  if (robots.length === 0) {
+    el.innerHTML = '<div class="no-robots">Sin robots registrados aún.<br>Agrega al menos 3 para comenzar.</div>';
+    return;
+  }
+  el.innerHTML = robots.map((r, i) => `
+    <div class="robot-item">
+      <div class="robot-num">${i+1}</div>
+      <div class="robot-info">
+        <div class="robot-name">${r.name}</div>
+        <div class="robot-meta">⚙ <span>${r.team}</span> &nbsp;|&nbsp; 🎮 ${r.driver}</div>
+      </div>
+      <button class="btn btn-danger" style="padding:4px 10px;font-size:0.6rem" onclick="removeRobot(${r.id})">✕</button>
+    </div>
+  `).join('');
+}
+
+// ===================== GENERATE TOURNAMENT =====================
+function generateTournament() {
+  if (robots.length < 3) { showToast('Necesitas al menos 3 robots'); return; }
+
+  // Check if odd — offer bye
+  if (robots.length % 2 !== 0) {
+    openByeModal();
+    return;
+  }
+  startTournament(robots.slice(), null);
+}
+
+function startTournament(botList, byeBot) {
+  let pool = botList.filter(r => !byeBot || r.id !== byeBot.id);
+  const round1 = buildRound(pool, 1);
+  
+  tournament = {
+    allRobots: botList,
+    rounds: [round1],
+    currentRound: 0,
+    byePerRound: { 0: byeBot ? byeBot.id : null },
+    abcMode: false,
+    podium: [],
+    nextAdvancers: byeBot ? [byeBot.id] : []
+  };
+
+  switchTab('tournament');
+  renderTournament();
+  renderBracket();
+  saveState();
+  showToast('Torneo generado');
+}
+
+function buildRound(pool, roundNum) {
+  const shuffled = smartShuffle(pool);
+  const matches = [];
+  for (let i = 0; i < shuffled.length; i += 2) {
+    matches.push({
+      id: `r${roundNum}_m${Math.floor(i/2)+1}`,
+      r1: shuffled[i],
+      r2: shuffled[i+1] || null,
+      winner: null,
+      roundNum
+    });
+  }
+  return matches;
+}
+
+// Smart shuffle: avoid same team matchups when possible
+function smartShuffle(pool) {
+  const arr = [...pool];
+  // Check how many from each team
+  const teamCount = {};
+  arr.forEach(r => { teamCount[r.team] = (teamCount[r.team] || 0) + 1; });
+  
+  // Check if any team has >= totalRobots / 2 (need to spread them)
+  const needSpread = Object.values(teamCount).some(c => c >= arr.length / 2);
+  
+  if (!needSpread) {
+    // Simple shuffle
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  // Spread algorithm: interleave teams
+  const byTeam = {};
+  arr.forEach(r => { (byTeam[r.team] = byTeam[r.team] || []).push(r); });
+  const teamNames = Object.keys(byTeam).sort((a, b) => byTeam[b].length - byTeam[a].length);
+  
+  const result = [];
+  let idx = {};
+  teamNames.forEach(t => idx[t] = 0);
+  
+  while (result.length < arr.length) {
+    for (const t of teamNames) {
+      if (idx[t] < byTeam[t].length) {
+        result.push(byTeam[t][idx[t]++]);
+        if (result.length >= arr.length) break;
+      }
+    }
+  }
+  return result;
+}
+
+// ===================== RENDER TOURNAMENT =====================
+function renderTournament() {
+  if (!tournament) return;
+  const ri = tournament.currentRound;
+  const round = tournament.rounds[ri];
+  
+  // Status
+  const alive = getAliveRobots();
+  document.getElementById('st-round').textContent = ri + 1;
+  document.getElementById('st-total').textContent = tournament.allRobots.length;
+  document.getElementById('st-remaining').textContent = alive.length;
+  
+  if (tournament.podium.length > 0) {
+    document.getElementById('st-status').textContent = 'FINALIZADO';
+  } else if (tournament.abcMode) {
+    document.getElementById('st-status').textContent = 'RONDA ABC';
+  } else {
+    const pending = round.filter(m => !m.winner && !m.bye).length;
+    document.getElementById('st-status').textContent = pending ? `${pending} PENDIENTES` : 'RONDA COMPLETA';
+  }
+
+  // Round tabs
+  const tabsEl = document.getElementById('round-tabs');
+  tabsEl.innerHTML = tournament.rounds.map((r, i) => {
+    const done = r.every(m => m.winner || m.bye);
+    return `<button class="round-tab ${i === ri ? 'active' : ''} ${done && i !== ri ? 'completed' : ''}" onclick="viewRound(${i})">
+      Ronda ${i + 1}${done && i !== ri ? ' ✓' : ''}
+    </button>`;
+  }).join('');
+  if (tournament.abcMode || tournament.podium.length > 0) {
+    tabsEl.innerHTML += `<button class="round-tab ${tournament.abcMode ? 'active' : ''}" onclick="viewABC()">🏆 ABC Podio</button>`;
+  }
+
+  // Matches
+  renderMatchesForRound(ri);
+}
+
+function viewRound(i) {
+  if (!tournament) return;
+  tournament.currentRound = i;
+  tournament.abcMode = false;
+  renderTournament();
+  renderBracket();
+}
+
+function viewABC() {
+  if (!tournament) return;
+  tournament.abcMode = true;
+  renderTournament();
+  renderBracket();
+}
+
+function renderMatchesForRound(ri) {
+  const container = document.getElementById('matches-container');
+  
+  if (tournament.abcMode) {
+    renderABCSection(container);
+    return;
+  }
+
+  const round = tournament.rounds[ri];
+  const bye = tournament.byePerRound[ri];
+  const byeRobot = bye ? tournament.allRobots.find(r => r.id === bye) : null;
+  
+  let html = '<div class="matches-grid">';
+  
+  round.forEach((match, mi) => {
+    const isCompleted = match.winner || match.bye;
+    html += `
+    <div class="match-big">
+      <div class="match-header">
+        <span>COMBATE ${mi + 1} — RONDA ${ri + 1}</span>
+        <button class="edit-lnk" onclick="editMatch('${match.id}', ${ri})">✏ Editar</button>
+      </div>
+      ${renderCombatant(match.r1, match, 0)}
+      <div class="vs-divider">— VS —</div>
+      ${renderCombatant(match.r2, match, 1)}
+      ${!isCompleted ? `
+      <div class="match-actions">
+        <button class="btn btn-accent" style="flex:1;padding:8px" onclick="openWinnerModal('${match.id}',${ri})">⚔ Seleccionar Ganador</button>
+      </div>` : ''}
+    </div>`;
+  });
+  
+  html += '</div>';
+
+  // Bye robot card
+  if (byeRobot) {
+    html += `
+    <div style="margin-top:16px;">
+    <div class="match-big" style="max-width:300px;border-color:var(--accent2)">
+      <div class="match-header" style="color:var(--accent2)">
+        <span>BYE — PASE DIRECTO</span>
+      </div>
+      <div class="combatant bye-slot no-hover">
+        <div class="combatant-num">⚡</div>
+        <div class="combatant-info">
+          <div class="c-name">${byeRobot.name}</div>
+          <div class="c-team">${byeRobot.team}</div>
+        </div>
+        <span class="badge badge-orange">BYE</span>
+      </div>
+    </div></div>`;
+  }
+
+  // Check if round complete → show "Next Round" button
+  const allDone = round.every(m => m.winner || m.bye);
+  if (allDone && tournament.podium.length === 0 && !tournament.abcMode) {
+    html += `<div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap;">
+      <button class="btn btn-win" onclick="advanceRound()">➜ Avanzar a Siguiente Ronda</button>
+    </div>`;
+  }
+  
+  container.innerHTML = html;
+}
+
+function renderCombatant(robot, match, idx) {
+  if (!robot) {
+    return `<div class="combatant bye-slot no-hover">
+      <div class="combatant-num">—</div>
+      <div class="combatant-info"><div class="c-name" style="color:var(--muted)">Vacío</div></div>
+    </div>`;
+  }
+  const isWinner = match.winner === robot.id;
+  const isLoser = match.winner && match.winner !== robot.id;
+  return `
+  <div class="combatant ${isWinner ? 'winner' : ''} ${isLoser ? 'loser' : ''}" onclick="quickWin('${match.id}', ${robot.id}, ${match.roundNum !== undefined ? match.roundNum : 0})">
+    <div class="combatant-num">${idx === 0 ? 'A' : 'B'}</div>
+    <div class="combatant-info">
+      <div class="c-name">${robot.name}</div>
+      <div class="c-team">⚙ ${robot.team}</div>
+      <div class="c-driver">🎮 ${robot.driver}</div>
+    </div>
+    <div class="combatant-win-dot"></div>
+  </div>`;
+}
+
+// ===================== WINNER SELECTION =====================
+function openWinnerModal(matchId, roundIdx) {
+  const match = tournament.rounds[roundIdx].find(m => m.id === matchId);
+  if (!match) return;
+  currentMatchEdit = { matchId, roundIdx };
+  
+  const opts = document.getElementById('winner-options');
+  opts.innerHTML = [match.r1, match.r2].filter(Boolean).map(r => `
+    <button class="winner-option" onclick="setWinner('${matchId}', ${roundIdx}, ${r.id})">
+      <div class="opt-name">🏆 ${r.name}</div>
+      <div class="opt-meta">⚙ ${r.team} &nbsp;|&nbsp; 🎮 ${r.driver}</div>
+    </button>
+  `).join('');
+  
+  document.getElementById('modal-winner').classList.add('open');
+}
+
+function quickWin(matchId, robotId, roundIdx) {
+  // Find actual round
+  let ri = -1;
+  tournament.rounds.forEach((r, i) => { if (r.find(m => m.id === matchId)) ri = i; });
+  if (ri < 0) return;
+  const match = tournament.rounds[ri].find(m => m.id === matchId);
+  if (!match || match.winner) return;
+  setWinner(matchId, ri, robotId);
+}
+
+function setWinner(matchId, roundIdx, robotId) {
+  const match = tournament.rounds[roundIdx].find(m => m.id === matchId);
+  if (!match) return;
+  match.winner = robotId;
+  closeModal();
+  renderTournament();
+  renderBracket();
+  saveState();
+  const robot = tournament.allRobots.find(r => r.id === robotId);
+  showToast(`${robot?.name} avanza`);
+}
+
+function editMatch(matchId, roundIdx) {
+  openWinnerModal(matchId, roundIdx);
+}
+
+function closeModal() { document.getElementById('modal-winner').classList.remove('open'); }
+
+// ===================== ADVANCE ROUND =====================
+function advanceRound() {
+  const ri = tournament.currentRound;
+  const round = tournament.rounds[ri];
+  
+  // Gather winners from this round + bye from next
+  const winners = round.map(m => {
+    if (m.winner) return tournament.allRobots.find(r => r.id === m.winner);
+    if (m.bye) return m.r1; // single robot bye
+    return null;
+  }).filter(Boolean);
+  
+  const bye = tournament.byePerRound[ri];
+  const byeRobot = bye ? tournament.allRobots.find(r => r.id === bye) : null;
+  if (byeRobot) winners.push(byeRobot);
+
+  const nextRoundNum = ri + 2;
+
+  // Only 1 → champion
+  if (winners.length === 1) {
+    tournament.podium = [{ place: 1, robot: winners[0] }];
+    tournament.currentRound = ri;
+    renderTournament();
+    renderBracket();
+    showToast(`🏆 Campeón: ${winners[0].name}`);
+    return;
+  }
+
+  // 3 robots → ABC
+  if (winners.length === 3) {
+    tournament.abcMode = true;
+    tournament.abcRobots = winners;
+    // Only create match A — match B is built dynamically after A resolves
+    tournament.abcMatches = [
+      { id: 'abc_1', r1: winners[0], r2: winners[1], winner: null },
+    ];
+    tournament.rounds.push([]);
+    tournament.currentRound = tournament.rounds.length - 1;
+    renderTournament();
+    renderBracket();
+    showToast('3 robots: activando ronda ABC');
+    return;
+  }
+
+  // Odd → offer bye
+  if (winners.length % 2 !== 0) {
+    tournament._pendingNextWinners = winners;
+    openByeModalForRound(winners, nextRoundNum);
+    return;
+  }
+
+  // Even → next round
+  const nextRound = buildRound(winners, nextRoundNum);
+  tournament.rounds.push(nextRound);
+  tournament.byePerRound[ri + 1] = null;
+  tournament.currentRound = ri + 1;
+  renderTournament();
+  renderBracket();
+  saveState();
+}
+
+// ===================== BYE MODAL =====================
+function openByeModal() {
+  // Called during initial setup — robots list is the source
+  const opts = document.getElementById('bye-options');
+  opts.innerHTML = robots.map(r => `
+    <button class="winner-option" onclick="selectBye(${r.id})">
+      <div class="opt-name">⚡ ${r.name}</div>
+      <div class="opt-meta">⚙ ${r.team} &nbsp;|&nbsp; 🎮 ${r.driver}</div>
+    </button>
+  `).join('');
+  // Mark context so randomBye knows which pool to use
+  document.getElementById('modal-bye')._context = 'initial';
+  document.getElementById('modal-bye').classList.add('open');
+}
+
+function openByeModalForRound(winners, roundNum) {
+  const opts = document.getElementById('bye-options');
+  opts.innerHTML = winners.map(r => `
+    <button class="winner-option" onclick="selectByeForRound(${r.id})">
+      <div class="opt-name">⚡ ${r.name}</div>
+      <div class="opt-meta">⚙ ${r.team} &nbsp;|&nbsp; 🎮 ${r.driver}</div>
+    </button>
+  `).join('');
+  document.getElementById('modal-bye')._context = 'round';
+  document.getElementById('modal-bye').classList.add('open');
+}
+
+function randomBye() {
+  const ctx = document.getElementById('modal-bye')._context;
+  if (ctx === 'initial') {
+    const r = robots[Math.floor(Math.random() * robots.length)];
+    selectBye(r.id);
+  } else if (ctx === 'round') {
+    const w = tournament._pendingNextWinners;
+    const r = w[Math.floor(Math.random() * w.length)];
+    selectByeForRound(r.id);
+  }
+}
+
+function selectBye(robotId) {
+  closeByeModal();
+  const byeBot = robots.find(r => r.id === robotId);
+  startTournament(robots.slice(), byeBot);
+}
+
+function selectByeForRound(robotId) {
+  closeByeModal();
+  const winners = tournament._pendingNextWinners;
+  const ri = tournament.currentRound;
+  const pool = winners.filter(r => r.id !== robotId);
+  const nextRound = buildRound(pool, ri + 2);
+  tournament.rounds.push(nextRound);
+  tournament.byePerRound[ri + 1] = robotId;
+  tournament.currentRound = ri + 1;
+  tournament._pendingNextWinners = null;
+  renderTournament();
+  renderBracket();
+  saveState();
+  showToast('Bye asignado');
+}
+
+function closeByeModal() { document.getElementById('modal-bye').classList.remove('open'); }
+
+// ===================== ABC SECTION =====================
+function renderABCSection(container) {
+  if (!tournament.abcRobots) { container.innerHTML = ''; return; }
+  const [A, B, C] = tournament.abcRobots;
+  // abcMatches[0] = { r1:A, r2:B, winner:null }
+  // abcMatches[1] = built ONLY after m1 is done: { r1:loser_of_m1, r2:C, winner:null }
+  const m1 = tournament.abcMatches[0];
+
+  // Derive m2 dynamically from m1 result — never pre-store r2 for m2
+  let m2 = tournament.abcMatches[1] || null;
+  if (m1.winner && !m2) {
+    const loser = m1.winner === m1.r1.id ? m1.r2 : m1.r1;
+    m2 = { id: 'abc_2', r1: loser, r2: C, winner: null };
+    tournament.abcMatches[1] = m2;
+  }
+  // If m1 was edited (winner reset), also reset m2 and podium
+  if (!m1.winner) {
+    tournament.abcMatches[1] = null;
+    m2 = null;
+    tournament.podium = [];
+  }
+
+  // Podium display
+  let podiumHTML = '';
+  if (tournament.podium.length >= 3) {
+    const p = tournament.podium;
+    podiumHTML = `
+    <div class="podium" style="margin-top:32px">
+      <div class="podium-place">
+        <div class="podium-name">${p[1]?.robot?.name || '?'}</div>
+        <div class="podium-team">${p[1]?.robot?.team || ''}</div>
+        <div class="podium-block">2</div>
+      </div>
+      <div class="podium-place">
+        <div class="podium-name">${p[0]?.robot?.name || '?'}</div>
+        <div class="podium-team">${p[0]?.robot?.team || ''}</div>
+        <div class="podium-block">1</div>
+      </div>
+      <div class="podium-place">
+        <div class="podium-name">${p[2]?.robot?.name || '?'}</div>
+        <div class="podium-team">${p[2]?.robot?.team || ''}</div>
+        <div class="podium-block">3</div>
+      </div>
+    </div>`;
+  }
+
+  // Combate B card
+  let combateBHTML = '';
+  if (m2) {
+    combateBHTML = `
+    <div class="match-big" style="${m2.winner ? 'border-color:var(--win)' : 'border-color:var(--gold)'}">
+      <div class="match-header">
+        <span>COMBATE B — Por 2° y 3° lugar</span>
+        <button class="edit-lnk" onclick="editABC(1)">✏ Editar</button>
+      </div>
+      ${renderCombatantABC(m2.r1, m2, 0)}
+      <div class="vs-divider">— VS —</div>
+      ${renderCombatantABC(m2.r2, m2, 1)}
+      ${!m2.winner ? `<div class="match-actions"><button class="btn btn-accent" style="flex:1;padding:8px" onclick="openABCWinner(1)">⚔ Seleccionar Ganador</button></div>` : ''}
+    </div>`;
+  } else {
+    combateBHTML = `
+    <div class="match-big" style="opacity:0.4;pointer-events:none">
+      <div class="match-header"><span>COMBATE B — Esperando resultado de Combate A</span></div>
+      <div class="combatant no-hover">
+        <div class="combatant-num">?</div>
+        <div class="combatant-info"><div class="c-name" style="color:var(--muted)">Perdedor del Combate A</div></div>
+      </div>
+      <div class="vs-divider">— VS —</div>
+      <div class="combatant no-hover">
+        <div class="combatant-num">C</div>
+        <div class="combatant-info">
+          <div class="c-name">${C.name}</div>
+          <div class="c-team">⚙ ${C.team}</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  container.innerHTML = `
+  <div class="abc-section">
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:20px;">
+      3 robots clasificados. <strong style="color:var(--gold)">Combate A:</strong> determina al campeón. 
+      <strong style="color:var(--gold)">Combate B:</strong> el perdedor de A pelea contra el 3er robot para el 2° y 3° lugar.
+    </p>
+    <div class="matches-grid">
+      <!-- Combate A -->
+      <div class="match-big" style="${m1.winner ? 'border-color:var(--win)' : 'border-color:var(--gold)'}">
+        <div class="match-header">
+          <span>COMBATE A — Por el 1er lugar</span>
+          <button class="edit-lnk" onclick="editABC(0)">✏ Editar</button>
+        </div>
+        ${renderCombatantABC(A, m1, 0)}
+        <div class="vs-divider">— VS —</div>
+        ${renderCombatantABC(B, m1, 1)}
+        ${!m1.winner ? `<div class="match-actions"><button class="btn btn-accent" style="flex:1;padding:8px" onclick="openABCWinner(0)">⚔ Seleccionar Ganador</button></div>` : ''}
+      </div>
+      <!-- Combate B -->
+      ${combateBHTML}
+    </div>
+    ${podiumHTML}
+  </div>`;
+}
+
+function renderCombatantABC(robot, match, idx) {
+  if (!robot) return `<div class="combatant no-hover"><div class="combatant-num">?</div></div>`;
+  const isWinner = match.winner === robot.id;
+  const isLoser = match.winner && match.winner !== robot.id;
+  return `<div class="combatant ${isWinner?'winner':''} ${isLoser?'loser':''}">
+    <div class="combatant-num">${isWinner ? '🏆' : (idx===0?'A':'B')}</div>
+    <div class="combatant-info">
+      <div class="c-name">${robot.name}</div>
+      <div class="c-team">⚙ ${robot.team}</div>
+      <div class="c-driver">🎮 ${robot.driver}</div>
+    </div>
+    <div class="combatant-win-dot"></div>
+  </div>`;
+}
+
+function openABCWinner(matchIdx) {
+  const match = tournament.abcMatches[matchIdx];
+  if (!match) return;
+  const opts = document.getElementById('winner-options');
+  // Always use the two robots actually IN this match
+  const participants = [match.r1, match.r2].filter(Boolean);
+  opts.innerHTML = participants.map(r => `
+    <button class="winner-option" onclick="setABCWinner(${matchIdx}, ${r.id})">
+      <div class="opt-name">🏆 ${r.name}</div>
+      <div class="opt-meta">⚙ ${r.team} &nbsp;|&nbsp; 🎮 ${r.driver}</div>
+    </button>
+  `).join('');
+  document.getElementById('modal-winner').classList.add('open');
+}
+
+function editABC(idx) {
+  // Reset this match winner so it can be re-assigned
+  if (tournament.abcMatches[idx]) {
+    tournament.abcMatches[idx].winner = null;
+    // If editing m1, also wipe m2 and podium since they depend on m1
+    if (idx === 0) {
+      tournament.abcMatches[1] = null;
+      tournament.podium = [];
+    }
+    // If editing m2, reset podium
+    if (idx === 1) tournament.podium = [];
+  }
+  renderTournament();
+  renderBracket();
+  saveState();
+  openABCWinner(idx);
+}
+
+function setABCWinner(matchIdx, robotId) {
+  const match = tournament.abcMatches[matchIdx];
+  if (!match) return;
+  match.winner = robotId;
+  closeModal();
+
+  // After both matches done, compute podium
+  const m1 = tournament.abcMatches[0];
+  const m2 = tournament.abcMatches[1];
+  if (m1 && m2 && m1.winner && m2.winner) {
+    const champ   = m1.r1.id === m1.winner ? m1.r1 : m1.r2;           // winner of A = 1st
+    const second  = m2.r1.id === m2.winner ? m2.r1 : m2.r2;           // winner of B = 2nd
+    const third   = m2.r1.id === m2.winner ? m2.r2 : m2.r1;           // loser  of B = 3rd
+    tournament.podium = [
+      { place: 1, robot: champ },
+      { place: 2, robot: second },
+      { place: 3, robot: third },
+    ];
+    showToast(`🏆 Campeón: ${champ.name}`);
+  }
+
+  renderTournament();
+  renderBracket();
+  saveState();
+}
+
+// ===================== BRACKET VIEW =====================
+function renderBracket() {
+  if (!tournament) return;
+  const el = document.getElementById('bracket-display');
+  
+  const totalRounds = tournament.rounds.length;
+  let html = '';
+
+  tournament.rounds.forEach((round, ri) => {
+    const label = ri === tournament.rounds.length - 1 && tournament.abcMode ? 'ABC' :
+      ri === tournament.rounds.length - 1 && !tournament.abcMode ? 'Final' :
+      ri === tournament.rounds.length - 2 && !tournament.abcMode ? 'Semis' :
+      `Ronda ${ri + 1}`;
+
+    html += `<div class="round-col">
+      <div class="round-header">${label}</div>
+      <div class="round-matches">`;
+
+    round.forEach((match, mi) => {
+      html += `<div class="match-card ${!match.winner ? 'editable' : ''}">
+        <div class="match-num">M${mi+1}</div>`;
+      
+      [match.r1, match.r2].forEach(robot => {
+        if (!robot) {
+          html += `<div class="robot-slot"><div class="slot-name" style="color:var(--border)">—</div></div>`;
+          return;
+        }
+        const isWin = match.winner === robot.id;
+        const isLose = match.winner && match.winner !== robot.id;
+        html += `<div class="robot-slot ${isWin?'winner':''} ${isLose?'loser':''}">
+          <div class="win-indicator ${isWin?'':'hidden'}"></div>
+          <div style="flex:1">
+            <div class="slot-name">${robot.name}</div>
+            <div class="slot-team">${robot.team}</div>
+          </div>
+        </div>`;
+      });
+      
+      html += '</div>';
+    });
+
+    // Bye
+    const bye = tournament.byePerRound[ri];
+    if (bye) {
+      const byeRobot = tournament.allRobots.find(r => r.id === bye);
+      if (byeRobot) {
+        html += `<div class="match-card" style="border-color:var(--accent2)">
+          <div class="match-num" style="color:var(--accent2)">BYE</div>
+          <div class="robot-slot bye">
+            <span class="bye-tag">BYE</span>
+            <div style="flex:1"><div class="slot-name">${byeRobot.name}</div><div class="slot-team">${byeRobot.team}</div></div>
+          </div>
+        </div>`;
+      }
+    }
+
+    html += '</div></div>';
+
+    // Connector
+    if (ri < totalRounds - 1) {
+      html += `<div class="round-connector">
+        ${round.map(() => `<div class="connector-group"><svg width="24" height="40" style="opacity:0.3"><path d="M 0 20 L 24 20" stroke="#00d4ff" stroke-width="1" fill="none"/></svg></div>`).join('')}
+      </div>`;
+    }
+  });
+
+  // Podium
+  if (tournament.podium.length > 0) {
+    html += `<div class="round-col">
+      <div class="round-header" style="color:var(--gold)">🏆 Podio</div>
+      <div class="round-matches">`;
+    tournament.podium.forEach(p => {
+      const medal = p.place === 1 ? '🥇' : p.place === 2 ? '🥈' : '🥉';
+      html += `<div class="match-card" style="border-color:${p.place===1?'var(--gold)':p.place===2?'var(--silver)':'var(--bronze)'}">
+        <div class="match-num" style="color:${p.place===1?'var(--gold)':p.place===2?'var(--silver)':'var(--bronze)'}">${medal} ${p.place}° LUGAR</div>
+        <div class="robot-slot winner">
+          <div class="win-indicator"></div>
+          <div style="flex:1">
+            <div class="slot-name">${p.robot.name}</div>
+            <div class="slot-team">${p.robot.team}</div>
+          </div>
+        </div>
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+
+  el.innerHTML = html || '<div class="empty-state"><span class="big">⚙</span>Genera el torneo primero.</div>';
+}
+
+// ===================== GET ALIVE ROBOTS =====================
+function getAliveRobots() {
+  if (!tournament) return robots;
+  const lastRound = tournament.rounds[tournament.currentRound] || [];
+  const alive = [];
+  lastRound.forEach(m => {
+    if (m.r1) alive.push(m.r1);
+    if (m.r2) alive.push(m.r2);
+  });
+  const bye = tournament.byePerRound[tournament.currentRound];
+  if (bye) { const b = tournament.allRobots.find(r => r.id === bye); if (b) alive.push(b); }
+  return alive;
+}
+
+// ===================== TABS =====================
+function switchTab(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  event?.target?.classList?.add('active');
+  currentView = name;
+  
+  if (name === 'tournament') {
+    document.getElementById('tab-tournament').classList.add('active');
+    if (tournament) renderTournament();
+    else document.getElementById('matches-container').innerHTML = '<div class="empty-state"><span class="big">⚙</span>Registra robots y genera el torneo primero.</div>';
+  }
+  if (name === 'bracket') {
+    document.getElementById('tab-bracket').classList.add('active');
+    if (tournament) renderBracket();
+    else document.getElementById('bracket-display').innerHTML = '<div class="empty-state"><span class="big">⚙</span>Genera el torneo para ver el bracket.</div>';
+  }
+  if (name === 'setup') {
+    document.querySelector('.tab-btn').classList.add('active');
+  }
+}
+
+// ===================== TOAST =====================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ===================== PERSISTENCE =====================
+const STORAGE_KEY = 'robot_tournament_v1';
+let _saveTimer = null;
+
+function saveState() {
+  try {
+    const state = { robots, tournament };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // Show "guardado" indicator briefly
+    const ind = document.getElementById('save-indicator');
+    if (ind) {
+      ind.style.opacity = '1';
+      clearTimeout(ind._t);
+      ind._t = setTimeout(() => { ind.style.opacity = '0'; }, 1800);
+    }
+  } catch(e) { /* quota exceeded or private mode */ }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const state = JSON.parse(raw);
+    if (state.robots && Array.isArray(state.robots)) {
+      robots = state.robots;
+      renderRobotList();
+    }
+    if (state.tournament) {
+      tournament = state.tournament;
+      // Restore the active tab based on saved state
+      if (tournament) {
+        switchTab('tournament');
+        renderTournament();
+        renderBracket();
+      }
+    }
+  } catch(e) { /* corrupt data, ignore */ }
+}
+
+// saveState() is called directly inside each mutating function below
+
+// ===================== RESET =====================
+function confirmReset() {
+  document.getElementById('modal-reset').classList.add('open');
+}
+function closeResetModal() {
+  document.getElementById('modal-reset').classList.remove('open');
+}
+function doReset() {
+  robots = [];
+  tournament = null;
+  localStorage.removeItem(STORAGE_KEY);
+  closeResetModal();
+  // Reset UI fully
+  renderRobotList();
+  document.getElementById('matches-container').innerHTML = '<div class="empty-state"><span class="big">⚙</span>Registra robots y genera el torneo primero.</div>';
+  document.getElementById('bracket-display').innerHTML = '<div class="empty-state"><span class="big">⚙</span>Genera el torneo para ver el bracket.</div>';
+  document.getElementById('round-tabs').innerHTML = '';
+  switchTab('setup');
+  showToast('Todo borrado — listo para empezar');
+}
+
+// ===================== INIT =====================
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); closeByeModal(); closeResetModal(); }
+});
+
+// Load persisted state on page load
+loadState();
+</script>
+</body>
+</html>
